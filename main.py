@@ -6,19 +6,21 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.client.default import DefaultBotProperties
 
 # ==========================================
 # ⚙️ ASOSIY SOZLAMALAR
 # ==========================================
 BOT_TOKEN = "8798060376:AAH2RkSzM50-8iC6KnT_Oq8yMBws1W-ZpH0" 
-ADMIN_ID = 2024143361  # O'zingizning Telegram ID raqamingizni yozing
+ADMIN_ID = 2024143361  # O'zingizning Telegram ID raqamingiz
 
 CHANNEL_USERNAME = "@ozbemas_agar"
 PARTNER_BOT = "@ChatAl_gptBot"
 TEST_BOT = "@Abituriyent_2026Bot"
 DB_NAME = "abituriyentlar.db"
 
-bot = Bot(token=BOT_TOKEN)
+# parse_mode="HTML" ni bot darajasida sozlaymiz (Aiogram 3.x uchun eng to'g'ri usul)
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
 
 # ==========================================
@@ -113,9 +115,8 @@ async def check_subscription(user_id: int) -> bool:
 # ==========================================
 @dp.message(Command("start"))
 async def start_handler(message: types.Message, state: FSMContext):
-    await state.clear() # Har ehtimolga qarshi eski holatlarni tozalaymiz
+    await state.clear() 
     
-    # Bazaga asinxron qo'shish
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (message.from_user.id,))
         await db.commit()
@@ -123,7 +124,6 @@ async def start_handler(message: types.Message, state: FSMContext):
     if not await check_subscription(message.from_user.id):
         await message.answer(
             f"Assalomu alaykum! Botdan to'liq foydalanish uchun <b>{CHANNEL_USERNAME}</b> kanaliga a'zo bo'ling.", 
-            parse_mode="HTML",
             reply_markup=get_sub_keyboard()
         )
         return
@@ -132,7 +132,7 @@ async def start_handler(message: types.Message, state: FSMContext):
             f"Botimiz orqali mandat natijalarini, o'tish ballarini va kvotalarni bilib olishingiz mumkin.\n"
             f"Sizga shuningdek kuchli sun'iy intellekt yordamchimiz — {PARTNER_BOT} ni ham tavsiya qilamiz.\n\n"
             f"👇 Quyidagi menyudan kerakli bo'limni tanlang:")
-    await message.answer(text, parse_mode="HTML", reply_markup=main_menu)
+    await message.answer(text, reply_markup=main_menu)
 
 
 @dp.callback_query(F.data == "check_sub")
@@ -154,7 +154,7 @@ async def broadcast_message(message: types.Message):
     text_to_send = message.text.replace("/send", "").strip()
     
     if not text_to_send:
-        return await message.answer("Iltimos, xabar matnini kiriting.\nMasalan: `/send Yangiliklar qo'shildi!`", parse_mode="Markdown")
+        return await message.answer("Iltimos, xabar matnini kiriting.\nMasalan: `/send Yangiliklar qo'shildi!`")
 
     async with aiosqlite.connect(DB_NAME) as db:
         async with db.execute("SELECT user_id FROM users") as cursor:
@@ -167,9 +167,9 @@ async def broadcast_message(message: types.Message):
         try:
             await bot.send_message(chat_id=user[0], text=text_to_send)
             count += 1
-            await asyncio.sleep(0.05) # Telegram API limitlaridan himoya (20 msg/sec)
+            await asyncio.sleep(0.05)
         except Exception:
-            pass # Bloklaganlarni e'tiborsiz qoldiradi
+            pass 
             
     await message.answer(f"✅ Xabar muvaffaqiyatli {count} ta foydalanuvchiga yetkazildi!")
 
@@ -178,7 +178,7 @@ async def broadcast_message(message: types.Message):
 # ==========================================
 @dp.message(F.text == "📊 O'tish ballari")
 async def passing_scores(message: types.Message):
-    await message.answer("Qaysi OTMning o'tgan yilgi o'tish ballarini ko'rmoqchisiz?\n\n*Ro'yxatdan tanlang:*", parse_mode="Markdown", reply_markup=get_otm_keyboard())
+    await message.answer("Qaysi OTMning o'tgan yilgi o'tish ballarini ko'rmoqchisiz?\n\n*Ro'yxatdan tanlang:*", reply_markup=get_otm_keyboard())
 
 @dp.callback_query(F.data.startswith("score_"))
 async def show_university_scores(callback: types.CallbackQuery):
@@ -191,7 +191,7 @@ async def show_university_scores(callback: types.CallbackQuery):
             text += (f"📌 <b>{yonalish['name']}</b>\n"
                      f"🟢 Grant: {yonalish['grant']}\n"
                      f"🟠 Kontrakt: {yonalish['kontrakt']}\n\n")
-        await callback.message.edit_text(text, parse_mode="HTML", reply_markup=get_otm_keyboard())
+        await callback.message.edit_text(text, reply_markup=get_otm_keyboard())
     await callback.answer()
 
 # ==========================================
@@ -212,7 +212,7 @@ async def online_test(message: types.Message):
     test_bot_btn = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🚀 Testlarni ishlash (Botga o'tish)", url=f"https://t.me/{TEST_BOT[1:]}")]
     ])
-    await message.answer(text, parse_mode="HTML", reply_markup=test_bot_btn)
+    await message.answer(text, reply_markup=test_bot_btn)
 
 # ==========================================
 # 🏢 KVOTALAR
@@ -222,7 +222,7 @@ async def quotas(message: types.Message):
     text = ("📊 <b>Qabul kvotalari (2026-yil uchun)</b>\n\n"
             "Hozirda kvotalar rasman tasdiqlanmagan. Tasdiqlanishi bilanoq barcha universitetlar kesimida shu bo'limga joylanadi.\n\n"
             "<i>Bizni kuzatishda davom eting!</i>")
-    await message.answer(text, parse_mode="HTML")
+    await message.answer(text)
 
 # ==========================================
 # 🔍 MANDAT TEKSHIRISH
@@ -232,7 +232,7 @@ async def mandat_start(message: types.Message, state: FSMContext):
     text = ("🆔 <b>Mandat natijasini bilish uchun Abituriyent ID raqamingizni kiriting.</b>\n\n"
             "<i>Masalan: 3145678</i>\n\n"
             "Ortga qaytish uchun menyudan istalgan boshqa tugmani bosing.")
-    await message.answer(text, parse_mode="HTML", reply_markup=types.ReplyKeyboardRemove())
+    await message.answer(text, reply_markup=types.ReplyKeyboardRemove())
     await state.set_state(MandatState.waiting_for_id)
 
 @dp.message(MandatState.waiting_for_id)
@@ -246,7 +246,7 @@ async def process_mandat_id(message: types.Message, state: FSMContext):
         await message.answer(f"🔍 <b>{message.text}</b> ID raqami tahlil qilinmoqda...\n\n"
                              f"⚠️ BMBA bazasida 2026-yil javoblari hali e'lon qilinmagan. "
                              f"Avgust oyida natijangizni to'g'ridan-to'g'ri shu yerdan bilib olasiz!", 
-                             parse_mode="HTML", reply_markup=main_menu)
+                             reply_markup=main_menu)
         await state.clear()
     else:
         await message.answer("❌ Xato! ID faqat raqamlardan iborat bo'lishi va 5 ta raqamdan ko'p bo'lishi kerak. Qaytadan kiriting:")
@@ -289,14 +289,14 @@ async def calc_mutaxassislik2(message: types.Message, state: FSMContext):
             f"📙 1-mutaxassislik: {mut1} ta x 3.1 = {round(mut1 * 3.1, 1)} ball\n"
             f"📕 2-mutaxassislik: {mut2} ta x 2.1 = {round(mut2 * 2.1, 1)} ball\n\n"
             f"🏆 <b>Umumiy yig'ilgan ball: {round(total_score, 1)}</b>")
-    await message.answer(text, parse_mode="HTML", reply_markup=main_menu)
+    await message.answer(text, reply_markup=main_menu)
     await state.clear()
 
 # ==========================================
 # ⚙️ ISHGA TUSHIRISH
 # ==========================================
 async def main():
-    await init_db() # Bazani ishga tushirish
+    await init_db() 
     logging.basicConfig(level=logging.INFO)
     print("🚀 Mandat Bot asinxron rejimda muvaffaqiyatli ishga tushdi!")
     await bot.delete_webhook(drop_pending_updates=True)
